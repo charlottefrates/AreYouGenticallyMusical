@@ -10,6 +10,7 @@
 ### Launching
 ```
 >   open index.html in browser
+>   open live site at: https://charlottefrates.github.io/AreYouGenticallyMusical/
 ```
 <h2>Developer Notes</h2>
 
