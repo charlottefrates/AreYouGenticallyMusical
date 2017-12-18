@@ -36,7 +36,7 @@
 <h3>Interesting Problems and Pitfalls</h3>
 
 <ul>
-  <li> CORS Error - implementation of node.js for "Access-Control-Allow-Origin" header responses</li>
+  <li> CORS Error - implementation of an API which enables cross-origin requests to anywhere (https://cors-anywhere.herokuapp.com/)</li>
   <li> Manegement of promises - how are promises handled in actual live codebase</li>
 </ul>
 
@@ -56,6 +56,7 @@
                 </ul>
             <li> Handle errors through UI </li>
         </ul>
+    <li> Implement lazy loading practices to defer UI DOM rendering of findings from API</li>
     <li> Language/String Translation </li>
     <li> Unit Testing - ensuring that functions behave as expected in both success and failure cases</li>
     <li> Better UI </li>
