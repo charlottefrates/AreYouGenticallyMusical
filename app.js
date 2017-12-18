@@ -38,12 +38,12 @@ let musicalScale = {
 // commits API response to memory
 let userData;
 
-// user cURL
+// user cURL endpoint
 let corsAvoidance = "https://cors-anywhere.herokuapp.com/";
 let userUrl = "https://api.23andme.com/3/account/";
 let userquery = corsAvoidance + userUrl
 
-// genetic marker cURL
+// genetic marker cURL endpoint
 let baseUrl = "https://api.23andme.com/3/profile/demo_profile_id/marker/";
 let markerquery = corsAvoidance;
 
@@ -87,11 +87,11 @@ class TwentyThreeAndMeClient {
 
     }
 
-    getVariantDataPromiseMap(variantList) {
+    getVariantDataPromiseMap(markerList) {
         let variantDataPromiseMap = new Map();
 
-        for (let i = 0; i < variantList.length; i++) {
-            let newBaseUrl = baseUrl.concat(variantList[i]);
+        for (let i = 0; i < markerList.length; i++) {
+            let newBaseUrl = baseUrl.concat(markerList[i]);
             let newMarkerquery = markerquery + newBaseUrl
             markerRequests.url = newMarkerquery;
 
@@ -104,49 +104,51 @@ class TwentyThreeAndMeClient {
             // variantData["rs4349633"] = <response_object_promise> 
             // variantData["rs3803"] = <response_object_promise> 
             // myMap.set(key, value);
-            variantDataPromiseMap.set(variantList[i], reponsePromise);
+            variantDataPromiseMap.set(markerList[i], reponsePromise);
         }
 
         return variantDataPromiseMap;
     }
 };
 
-// handles promises and determines client's mudical aptitude
+// handles promises and determines client's musical aptitude
 class MusicalAptitudeProcessor {
-    constructor(apiClient, variantsOfInterest) {
+    constructor(apiClient, markersOfInterest) {
         this.apiClient = apiClient;
-        this.variantsOfInterest = variantsOfInterest;
+        this.markersOfInterest = markersOfInterest;
     }
 
     // full genetic analysis on musical ability
     execute() {
-        // variantDataPromiseMap is a map from each variantOfInterest to an API repsonse
-        let variantDataPromiseMap = this.apiClient.getVariantDataPromiseMap(this.variantsOfInterest);
+        // variantDataPromiseMap is a map from each markersOfInterest to an API repsonse (note: returns line 91/110)
+        let variantDataPromiseMap = this.apiClient.getVariantDataPromiseMap(this.markersOfInterest);
         // We generate an array of the keys in the variantDataPromiseMap (the variants of interest).
-        let variantDataMapKeys = Array.from(variantDataPromiseMap.keys());
-        // Using the keys we put the promises in an array in the same order as the array of keys.
-        let variantDataPromiseValues = [];
+        let markerDataMapKeys = Array.from(variantDataPromiseMap.keys());
+        // Using the keys we put the promises in an array in the same order as the array of keys. Each array value is an object from response
+        let markerDataPromiseValues = [];
 
-        for (var i = 0; i < variantDataMapKeys.length; i++) {
-            // grabbing values associated with the key and adds it to variantDataPromiseValues
-            variantDataPromiseValues.push(variantDataPromiseMap.get(variantDataMapKeys[i]));
+        for (var i = 0; i < markerDataMapKeys.length; i++) {
+            // grabbing values associated with the key and adds it to markerDataPromiseValues
+            //myMap.get(key) returns value of that key
+            markerDataPromiseValues.push(variantDataPromiseMap.get(markerDataMapKeys[i]));
         }
-
-        Promise.all(variantDataPromiseValues)
+        
+        //method returns a single Promise that resolves when all of the promises in the iterable argument have resolved
+        Promise.all(markerDataPromiseValues)
             .then((values) => {
-                // values comes in the same order as variantDataPromiseValues. So we can
-                // Construct a variantDataMap using the variantDataMapKeys from the map of
+                // values comes in the same order as markerDataPromiseValues. So we can
+                // Construct a variantDataMap using the markerDataMapKeys from the map of
                 // promises and the corresponding value in the same position.
                 let variantDataMap = new Map();
-                for (var i = 0; i < variantDataMapKeys.length; i++) {
-                    variantDataMap.set(variantDataMapKeys[i], values[i]);
+                for (var i = 0; i < markerDataMapKeys.length; i++) {
+                    variantDataMap.set(markerDataMapKeys[i], values[i]);
                 }
-
+                
                 // with all mapping objects defined we then can call other methods to get desired results
                 let variantAlleleMap = this.generateVariantAlleleMap(variantDataMap);
                 let geneticScore = this.doTheMath(variantAlleleMap);
                 let scoreScale = this.areYouMusical(geneticScore);
-                let showResults = this.showResults(geneticScore, scoreScale,variantDataMapKeys.length);
+                let showResults = this.showResults(geneticScore, scoreScale,markerDataMapKeys.length);
             })
            
 
@@ -154,8 +156,9 @@ class MusicalAptitudeProcessor {
 
     // grabs alleles from markers of interest and maps them
     generateVariantAlleleMap(variantDataMap) {
+        //makes an array of the keys from variant map. Results in another array containing marker of interests.
         let variantDataMapKeys = Array.from(variantDataMap.keys());
-        
+        //makes a new map of alleles        
         let varaintAlleleMap = new Map();
 
         for (var i = 0; i < variantDataMapKeys.length; i++) {
@@ -176,7 +179,6 @@ class MusicalAptitudeProcessor {
 
             varaintAlleleMap.set(targetVariant, alleles);
         }
-
         return varaintAlleleMap;
     }
 
@@ -196,16 +198,21 @@ class MusicalAptitudeProcessor {
         let score = 0;
 
         for (var i = 0; i < variantAlleleMapKeys.length; i++) {
+            //Results in another array containing marker of interests.
             let targetVariant = variantAlleleMapKeys[i];
+            //grabs allele weights from global weight variable (line 5) based on marker of interest
             let weights = variantWeights[targetVariant];
-
+            //grabs alleleMap value based on marker of interest
             let alleles = varaintAlleleMap.get(targetVariant);
             let reversedAlleles = this.reverseAllele(alleles);
 
+            //matches the alleles to the marker's pre-defined allele weights
             let retrievedWeight = weights[alleles];
             let retrievedWeightFromReverse = weights[reversedAlleles];
             
-            // if promise returns an undefined allele, this function checks the reversed allele and compares it to variantWeight map
+            // if promise returns an undefined allele, meaning the alleles dont match for that marker
+            //this function checks the reversed allele and compares it to variantWeight map
+            //it then sums up the weights to a final score
             if (typeof retrievedWeight !== "undefined") {
                 score += retrievedWeight;
             } else if (typeof retrievedWeightFromReverse !== "undefined") {
@@ -221,6 +228,7 @@ class MusicalAptitudeProcessor {
     // maps score to musical ability scale
     areYouMusical(score) {
         let finalScore = Math.round(score);
+        //matches the final score to global musical scale object to get final rating string
         let rating = musicalScale[finalScore];
         console.log(rating);
         return rating;
