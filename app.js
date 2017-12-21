@@ -1,5 +1,5 @@
 // genetic markers to illustrate musical predosposition
-let musicalMarkers = ["rs4630083", "rs13146789", "rs4349633", "rs3803"];
+let musicalMarkers = ["rs4630083", "rs13146789", "rs4349633", "rs3803","rs3802"];
 
 // pre-determined effect weights for our genotypes
 let variantWeights = {
@@ -95,7 +95,14 @@ class TwentyThreeAndMeClient {
             let newMarkerquery = markerquery + newBaseUrl
             markerRequests.url = newMarkerquery;
 
-            let reponsePromise = $.ajax(markerRequests);
+            //error handing addition to account for when a marker is not found
+            let reponsePromise = $.ajax(markerRequests).catch( function(xhr, textStatus, errorThrown) {
+                if (xhr.status === 404) {
+                    return {errorResponse: "Not Found"};
+                } else {
+                    throw new Error(textStatus);
+                }
+            });;
 
             // Maps the variant string to the variant data retrieved from the API. 
             // It should look something like:
@@ -106,7 +113,7 @@ class TwentyThreeAndMeClient {
             // myMap.set(key, value);
             variantDataPromiseMap.set(markerList[i], reponsePromise);
         }
-
+        //console.log(variantDataPromiseMap);
         return variantDataPromiseMap;
     }
 };
@@ -120,6 +127,11 @@ class MusicalAptitudeProcessor {
 
     // full genetic analysis on musical ability
     execute() {
+
+        //NOTE MAKE SURE WE HAVE WEIGHTS IN WEIGHT MAP, IF IT DOESNT THEN IT FAIL
+        //for loop
+        
+
         // variantDataPromiseMap is a map from each markersOfInterest to an API repsonse (note: returns line 91/110)
         let variantDataPromiseMap = this.apiClient.getVariantDataPromiseMap(this.markersOfInterest);
         // We generate an array of the keys in the variantDataPromiseMap (the variants of interest).
@@ -143,6 +155,8 @@ class MusicalAptitudeProcessor {
                 for (var i = 0; i < markerDataMapKeys.length; i++) {
                     variantDataMap.set(markerDataMapKeys[i], values[i]);
                 }
+
+                console.log(variantDataMap);
                 
                 // with all mapping objects defined we then can call other methods to get desired results
                 let variantAlleleMap = this.generateVariantAlleleMap(variantDataMap);
@@ -166,6 +180,13 @@ class MusicalAptitudeProcessor {
 
             // for target variant get me the response
             let apiResponse = variantDataMap.get(targetVariant);
+
+            // If the variant wasn't found, skip it.
+            if (typeof apiResponse.errorResponse !== "undefined"
+                && apiResponse.errorResponse === "Not Found") {
+                continue;
+            }
+
             let alleles = "";
            
             for (var j = 0; j < apiResponse.variants.length; j++) {
@@ -178,7 +199,11 @@ class MusicalAptitudeProcessor {
             }
 
             varaintAlleleMap.set(targetVariant, alleles);
+            console.log('API Response', apiResponse);
+            console.log('alleles',alleles);
         }
+        
+        console.log(varaintAlleleMap);
         return varaintAlleleMap;
     }
 
